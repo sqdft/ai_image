@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Settings, Upload, Image as ImageIcon, Wand2, X, AlertCircle, Loader2, Download, SlidersHorizontal, Brush, Trash2, Eraser, Sparkles } from 'lucide-react';
+import { Settings, Upload, Image as ImageIcon, Wand2, X, AlertCircle, Loader2, Download, SlidersHorizontal, Brush, Trash2, Eraser, Sparkles, Globe } from 'lucide-react';
 import { GoogleGenAI } from '@google/genai';
 
 type Vendor = 'gemini' | 'openai' | 'custom';
@@ -610,6 +610,15 @@ export default function App() {
                 AI 绘画
               </button>
             </div>
+            <a
+              href="https://www.xiaoyang.zone.id"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-2 text-zinc-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors"
+              title="个人博客"
+            >
+              <Globe size={20} />
+            </a>
             <button
               onClick={() => setIsSettingsOpen(true)}
               className="p-2 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 rounded-full transition-colors"

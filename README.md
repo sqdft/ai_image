@@ -1,151 +1,224 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
-
 # AI 图像工具箱
 
-一个基于 AI 的图像处理工具，支持智能去水印和 AI 绘画功能。使用 React + TypeScript + Vite 构建，支持多种 AI 服务提供商。
+一个基于 React + TypeScript + Vite 的 AI 图像工具项目，支持两类核心能力：
 
-在 AI Studio 查看应用：https://ai.studio/apps/cb76f9e3-ddb4-4fad-822c-e1d76067cbeb
+- 图片去水印 / 局部修图
+- AI 文生图
 
-## ✨ 功能特性
+当前项目已经支持多种接口接入方式，包括 Gemini、OpenAI，以及兼容 OpenAI 风格的第三方 / 国内中转接口。
 
-### 🎨 智能去水印
-- 支持上传图片或拖拽上传
-- 可视化画笔工具，精确标记水印区域
-- 可调节画笔大小（5-100px）
-- 智能 AI 修复，自然填充背景
-- 支持全图智能去水印或选区精准去除
+个人博客：
+[https://www.xiaoyang.zone.id](https://www.xiaoyang.zone.id)
 
-### 🖼️ AI 绘画
-- 文本生成图像（Text-to-Image）
-- 支持中文提示词
-- 默认生成 1024x1024 高清图片
-- 一键下载生成结果
+## 功能概览
 
-### 🔧 多平台支持
-- **Gemini API**：使用 Google Gemini 2.5 Flash Image 模型
-- **OpenAI API**：支持 DALL-E 2/3 模型
-- **自定义 API**：兼容 OpenAI 格式的第三方接口
+### 1. 图片去水印
 
-## 🚀 快速开始
+- 支持上传 PNG / JPG / WEBP 图片
+- 支持画笔手动涂抹需要处理的区域
+- 支持调整画笔大小
+- 支持整图处理或局部蒙版处理
+- 处理结果可直接预览和下载
 
-### 环境要求
+### 2. AI 文生图
 
-- Node.js 16+ 
-- npm 或 yarn
+- 支持中文 Prompt
+- 支持比例选择
+- 当前内置比例包括：
+  - `1:1`
+  - `3:4`
+  - `4:3`
+  - `9:16`
+  - `16:9`
+- 生成结果可直接预览和下载
 
-### 安装步骤
+### 3. 多接口支持
 
-1. 克隆项目并安装依赖：
-   ```bash
-   git clone <repository-url>
-   cd <project-folder>
-   npm install
-   ```
+- `Google Gemini`
+- `OpenAI`
+- `第三方 / 国内兼容接口`
+- 已对 `ModelScope` 做了开发环境代理适配
 
-2. 配置 API Key：
-   
-   复制 `.env.example` 为 `.env.local`：
-   ```bash
-   cp .env.example .env.local
-   ```
-   
-   编辑 `.env.local` 文件，设置你的 Gemini API Key：
-   ```
-   GEMINI_API_KEY=your_api_key_here
-   ```
+### 4. 本地缓存
 
-3. 启动开发服务器：
-   ```bash
-   npm run dev
-   ```
+项目会自动缓存以下内容到浏览器本地：
 
-4. 在浏览器中打开 `http://localhost:3000`
+- API 配置
+- 生成 Prompt
+- 生成比例
+- 当前标签页
 
-## 📦 可用命令
+同时在设置面板中提供了“重置配置”按钮，可以一键清空本地缓存。
+
+## 技术栈
+
+- React 19
+- TypeScript
+- Vite 6
+- Tailwind CSS 4
+- `@google/genai`
+- `lucide-react`
+
+## 运行环境
+
+- Node.js 18+
+- npm 9+
+
+## 安装与启动
+
+### 1. 安装依赖
 
 ```bash
-npm run dev      # 启动开发服务器（端口 3000）
-npm run build    # 构建生产版本
-npm run preview  # 预览生产构建
-npm run clean    # 清理构建文件
-npm run lint     # TypeScript 类型检查
+npm install
 ```
 
-## ⚙️ 配置说明
+### 2. 启动开发环境
 
-### API 配置
+```bash
+npm run dev
+```
 
-应用支持三种 API 配置方式，可在设置面板中切换：
+默认启动地址：
 
-1. **Gemini API**
-   - 需要 Google AI Studio API Key
-   - 获取地址：https://aistudio.google.com/apikey
-   - 模型：gemini-2.5-flash-image
+```text
+http://localhost:3000
+```
 
-2. **OpenAI API**
-   - 需要 OpenAI API Key
-   - 获取地址：https://platform.openai.com/api-keys
-   - 去水印模型：dall-e-2
-   - 绘画模型：dall-e-3
+### 3. 构建生产版本
 
-3. **自定义 API**
-   - 支持兼容 OpenAI 格式的第三方接口
-   - 需配置：Base URL、API Key、模型名称
+```bash
+npm run build
+```
 
-### 环境变量
+### 4. 本地预览生产构建
 
-可以通过环境变量或应用内设置配置 API Key：
+```bash
+npm run preview
+```
 
-- `GEMINI_API_KEY`：Gemini API 密钥（可选，也可在设置中配置）
+## 脚本说明
 
-## 🛠️ 技术栈
+```bash
+npm run dev
+npm run build
+npm run preview
+npm run lint
+```
 
-- **前端框架**：React 19
-- **开发语言**：TypeScript
-- **构建工具**：Vite 6
-- **样式方案**：Tailwind CSS 4
-- **AI SDK**：@google/genai
-- **图标库**：lucide-react
-- **动画库**：motion
+注意：
+`package.json` 中还保留了一个 `npm run clean`，但当前写法是 Unix 风格的 `rm -rf dist`，如果你在 Windows PowerShell 下直接执行，可能需要改成兼容 Windows 的写法。
 
-## 📝 使用说明
+## API 配置说明
 
-### 去水印功能
+项目设置面板中支持三种接入方式。
 
-1. 点击"去水印"标签页
-2. 上传需要处理的图片
-3. 使用画笔工具涂抹水印区域（可选）
-4. 调整画笔大小以适应不同尺寸的水印
-5. 修改提示词描述需要去除的内容（可选）
-6. 点击"去除选区内的水印"或"智能去除水印"
-7. 等待 AI 处理完成
-8. 下载处理后的图片
+### Gemini
 
-### AI 绘画功能
+- 填写 `Gemini API Key`
+- 使用模型：`gemini-2.5-flash-image`
 
-1. 点击"AI 绘画"标签页
-2. 在文本框中输入画面描述
-3. 点击"开始生成"按钮
-4. 等待 AI 创作完成
-5. 下载生成的图片
+如果你已经在环境变量中提供了：
 
-## 🔒 隐私说明
+```env
+GEMINI_API_KEY=your_key
+```
 
-- 所有图片处理均通过配置的 API 服务完成
-- 应用本身不存储任何上传的图片或生成结果
-- 请注意各 API 服务商的隐私政策和使用条款
+前端也会优先读取它。
 
-## 📄 许可证
+### OpenAI
 
-本项目仅供学习和研究使用。使用时请遵守相关 API 服务商的使用条款。
+- 填写 `OpenAI API Key`
+- 文生图默认模型：`dall-e-3`
+- 图片编辑默认模型：`dall-e-2`
 
-## 🤝 贡献
+### 第三方 / 国内兼容
 
-欢迎提交 Issue 和 Pull Request！
+你需要填写：
 
-## 📮 联系方式
+- `Base URL`
+- `API Key`
+- `修图模型`
+- `绘图模型`
 
-- 个人博客：[https://www.xiaoyang.cc.cd](https://www.xiaoyang.cc.cd)
-- GitHub Issues：欢迎提出问题和建议
+项目会自动拼接接口路径：
+
+- 生成图：`/images/generations`
+- 修图：`/images/edits`
+
+例如如果接口文档是：
+
+```text
+https://api.example.com/v1/images/generations
+```
+
+那你应当填写：
+
+```text
+https://api.example.com/v1
+```
+
+### ModelScope 说明
+
+如果你使用的是：
+
+```text
+https://api-inference.modelscope.cn/v1
+```
+
+项目开发环境会通过 Vite 代理转发请求，以规避浏览器 CORS 限制。
+
+推荐填写示例：
+
+- Base URL: `https://api-inference.modelscope.cn/v1`
+- 绘图模型：`Qwen/Qwen-Image-2512`
+- 修图模型：`Qwen/Qwen-Image-Edit`
+
+注意：
+ModelScope 采用异步任务式返回，生成速度主要取决于服务端排队和模型本身，不是前端代码造成的。
+
+## 使用方式
+
+### 图片去水印
+
+1. 打开“去水印”标签页
+2. 上传图片
+3. 用画笔涂抹需要处理的区域
+4. 调整提示词
+5. 点击处理按钮
+6. 等待结果返回
+7. 下载图片
+
+### AI 文生图
+
+1. 打开“AI 绘画”标签页
+2. 输入 Prompt
+3. 选择比例
+4. 点击“开始生成”
+5. 等待返回结果
+6. 下载图片
+
+## 项目特点
+
+- 前端纯本地界面，交互直接
+- 设置自动缓存，避免重复填写
+- 对第三方接口做了基础兼容
+- 对 ModelScope 做了开发环境代理支持
+
+## 隐私说明
+
+- 图片与文本请求会发送到你配置的 API 服务商
+- 项目本身不会把你的配置上传到项目作者服务器
+- API Key 仅保存在当前浏览器本地存储中
+
+如果你在公共设备上使用，建议完成后点击“重置配置”清除本地缓存。
+
+## 后续可继续扩展的方向
+
+- 增加质量 / 分辨率选项
+- 增加生成历史记录
+- 增加任务状态可视化
+- 优化不同中转接口的兼容策略
+
+## 联系方式
+
+- 个人博客：[https://www.xiaoyang.zone.id](https://www.xiaoyang.zone.id)
