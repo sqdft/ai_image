@@ -15,6 +15,8 @@ interface AppSettings {
   prompt: string;
 }
 
+type ImageAspect = '1:1' | '3:4' | '4:3' | '9:16' | '16:9';
+
 const defaultSettings: AppSettings = {
   vendor: 'gemini',
   geminiApiKey: '',
@@ -24,6 +26,97 @@ const defaultSettings: AppSettings = {
   customEditModel: 'dall-e-2',
   customGenModel: 'dall-e-3',
   prompt: '移除此图片中的水印标志。自然地填充背景，使其看起来就像水印从未存在过一样。',
+};
+
+const aspectOptions: Array<{ value: ImageAspect; label: string; size: string }> = [
+  { value: '1:1', label: '1:1', size: '1024x1024' },
+  { value: '3:4', label: '3:4', size: '1024x1365' },
+  { value: '4:3', label: '4:3', size: '1365x1024' },
+  { value: '9:16', label: '9:16', size: '1024x1792' },
+  { value: '16:9', label: '16:9', size: '1792x1024' },
+];
+
+const STORAGE_KEYS = {
+  settings: 'ai-image.settings',
+  genPrompt: 'ai-image.genPrompt',
+  genAspect: 'ai-image.genAspect',
+  activeTab: 'ai-image.activeTab',
+} as const;
+
+const normalizeBaseUrl = (baseUrl: string) => baseUrl.trim().replace(/\/$/, '');
+
+const isModelScopeBaseUrl = (baseUrl: string) => /api-inference\.modelscope\.cn/i.test(baseUrl);
+
+const parseApiError = async (response: Response): Promise<string> => {
+  const text = await response.text().catch(() => '');
+  if (!text) return `API 请求错误: ${response.status}`;
+
+  try {
+    const data = JSON.parse(text);
+    return (
+      data.error?.message ||
+      data.message ||
+      data.msg ||
+      data.detail ||
+      data.code?.message ||
+      `API 请求错误: ${response.status}`
+    );
+  } catch {
+    return text;
+  }
+};
+
+const getImageResult = (data: any): string | null => {
+  if (data?.data?.[0]?.b64_json) return `data:image/png;base64,${data.data[0].b64_json}`;
+  if (data?.data?.[0]?.url) return data.data[0].url;
+  if (data?.output_images?.[0]?.url) return data.output_images[0].url;
+  if (typeof data?.output_images?.[0] === 'string') return data.output_images[0];
+  if (data?.outputs?.images?.[0]?.url) return data.outputs.images[0].url;
+  if (typeof data?.outputs?.images?.[0] === 'string') return data.outputs.images[0];
+  if (data?.outputs?.output_images?.[0]?.url) return data.outputs.output_images[0].url;
+  if (typeof data?.outputs?.output_images?.[0] === 'string') return data.outputs.output_images[0];
+  if (data?.images?.[0]?.url) return data.images[0].url;
+  if (typeof data?.images?.[0] === 'string') return data.images[0];
+  if (data?.output?.images?.[0]?.url) return data.output.images[0].url;
+  if (typeof data?.output?.images?.[0] === 'string') return data.output.images[0];
+  return null;
+};
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const pollModelScopeImageTask = async (
+  taskUrl: string,
+  headers: Record<string, string>,
+): Promise<any> => {
+  const taskHeaders = { ...headers };
+
+  let lastData: any = null;
+
+  for (let i = 0; i < 120; i++) {
+    const response = await fetch(taskUrl, {
+      method: 'GET',
+      headers: taskHeaders,
+    });
+
+    if (!response.ok) {
+      throw new Error(await parseApiError(response));
+    }
+
+    const data = await response.json();
+    lastData = data;
+    if (getImageResult(data)) {
+      return data;
+    }
+
+    const status = String(data?.task_status || data?.output?.task_status || '').toUpperCase();
+    if (status && status !== 'PENDING' && status !== 'RUNNING' && status !== 'PROCESSING' && status !== 'SUCCEED') {
+      throw new Error(`ModelScope 任务失败: ${JSON.stringify(data).slice(0, 200)}`);
+    }
+
+    await sleep(2000);
+  }
+
+  throw new Error(`ModelScope ????: ${JSON.stringify(lastData).slice(0, 300)}`);
 };
 
 export default function App() {
@@ -38,6 +131,7 @@ export default function App() {
   
   // Generation State
   const [genPrompt, setGenPrompt] = useState('一只可爱的赛博朋克风格小猫，霓虹灯背景，高画质');
+  const [genAspect, setGenAspect] = useState<ImageAspect>('1:1');
   const [genResultImage, setGenResultImage] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
@@ -50,6 +144,65 @@ export default function App() {
   const [brushSize, setBrushSize] = useState(30);
   const [hasMask, setHasMask] = useState(false);
   const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    try {
+      const storedSettings = window.localStorage.getItem(STORAGE_KEYS.settings);
+      if (storedSettings) {
+        setSettings((prev) => ({ ...prev, ...JSON.parse(storedSettings) }));
+      }
+
+      const storedGenPrompt = window.localStorage.getItem(STORAGE_KEYS.genPrompt);
+      if (storedGenPrompt) {
+        setGenPrompt(storedGenPrompt);
+      }
+
+      const storedGenAspect = window.localStorage.getItem(STORAGE_KEYS.genAspect) as ImageAspect | null;
+      if (storedGenAspect && aspectOptions.some((option) => option.value === storedGenAspect)) {
+        setGenAspect(storedGenAspect);
+      }
+
+      const storedActiveTab = window.localStorage.getItem(STORAGE_KEYS.activeTab) as 'watermark' | 'generate' | null;
+      if (storedActiveTab === 'watermark' || storedActiveTab === 'generate') {
+        setActiveTab(storedActiveTab);
+      }
+    } catch (error) {
+      console.error('Failed to restore app settings from localStorage.', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(STORAGE_KEYS.settings, JSON.stringify(settings));
+  }, [settings]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(STORAGE_KEYS.genPrompt, genPrompt);
+  }, [genPrompt]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(STORAGE_KEYS.genAspect, genAspect);
+  }, [genAspect]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(STORAGE_KEYS.activeTab, activeTab);
+  }, [activeTab]);
+
+  const resetStoredSettings = () => {
+    setSettings(defaultSettings);
+    setGenPrompt('一只可爱的赛博朋克风格小猫，霓虹灯背景，高画质');
+    setGenAspect('1:1');
+    setActiveTab('watermark');
+
+    if (typeof window !== 'undefined') {
+      Object.values(STORAGE_KEYS).forEach((key) => window.localStorage.removeItem(key));
+    }
+  };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -330,7 +483,7 @@ export default function App() {
       if (settings.vendor === 'gemini') {
         const apiKey = settings.geminiApiKey || process.env.GEMINI_API_KEY;
         if (!apiKey) {
-          throw new Error('需要 Gemini API Key。请在设置中配置，或确保已设置环境变量。');
+          throw new Error('?? Gemini API Key????????????????????');
         }
 
         const ai = new GoogleGenAI({ apiKey });
@@ -347,54 +500,73 @@ export default function App() {
             break;
           }
         }
-        
-        if (!foundImage) {
-           throw new Error('Gemini API 未返回图片。模型可能拒绝了请求或返回了文本。');
-        }
 
+        if (!foundImage) {
+          throw new Error('Gemini API ??????????????????????');
+        }
       } else if (settings.vendor === 'openai' || settings.vendor === 'custom') {
         const isCustom = settings.vendor === 'custom';
         const baseUrl = isCustom ? settings.customBaseUrl : 'https://api.openai.com/v1';
-        const apiUrl = `${baseUrl.replace(/\/$/, '')}/images/generations`;
         const apiKey = isCustom ? settings.customApiKey : settings.openaiApiKey;
         const model = isCustom ? settings.customGenModel : 'dall-e-3';
+        const isModelScope = isCustom && isModelScopeBaseUrl(baseUrl);
+        const normalizedBaseUrl = normalizeBaseUrl(baseUrl);
+        const modelscopePath = normalizedBaseUrl.replace(/^https?:\/\/api-inference\.modelscope\.cn/i, '');
+        const apiUrl = isModelScope
+          ? `/modelscope-proxy${modelscopePath}/images/generations`
+          : `${normalizedBaseUrl}/images/generations`;
 
         if (!baseUrl || !apiKey) {
-          throw new Error(`需要配置 ${isCustom ? '自定义 API' : 'OpenAI'} 的接口地址和 Key。`);
+          throw new Error(`???? ${isCustom ? '??? API' : 'OpenAI'} ?????? Key?`);
         }
+
+        const selectedAspect = aspectOptions.find((option) => option.value === genAspect) || aspectOptions[0];
+
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        };
+
+        const requestBody = isCustom
+          ? {
+              prompt: genPrompt,
+              model: model || undefined,
+              size: selectedAspect.size,
+            }
+          : {
+              prompt: genPrompt,
+              model: model || undefined,
+              n: 1,
+              size: selectedAspect.size,
+              response_format: 'b64_json',
+            };
 
         const response = await fetch(apiUrl, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`,
-          },
-          body: JSON.stringify({
-            prompt: genPrompt,
-            model: model || undefined,
-            n: 1,
-            size: '1024x1024',
-            response_format: 'b64_json'
-          }),
+          headers,
+          body: JSON.stringify(requestBody),
         });
 
         if (!response.ok) {
-          const errData = await response.json().catch(() => ({}));
-          throw new Error(errData.error?.message || `API 请求错误: ${response.status}`);
+          throw new Error(await parseApiError(response));
         }
 
-        const data = await response.json();
-        if (data.data && data.data[0] && data.data[0].b64_json) {
-            setGenResultImage(`data:image/png;base64,${data.data[0].b64_json}`);
-        } else if (data.data && data.data[0] && data.data[0].url) {
-            setGenResultImage(data.data[0].url);
+        let data = await response.json();
+        if (isModelScope && data?.task_id) {
+          const taskUrl = `${apiUrl.replace(/\/images\/generations$/, '')}/tasks/${data.task_id}`;
+          data = await pollModelScopeImageTask(taskUrl, headers);
+        }
+
+        const imageResult = getImageResult(data);
+        if (imageResult) {
+          setGenResultImage(imageResult);
         } else {
-            throw new Error('API 未返回预期格式的图片。请确保接口返回标准的 OpenAI 图像生成格式。');
+          throw new Error(`API ???????????: ${JSON.stringify(data).slice(0, 200)}`);
         }
       }
     } catch (err: any) {
       console.error(err);
-      setGenError(err.message || '生成过程中发生错误。');
+      setGenError(err.message || '??????????');
     } finally {
       setIsGenerating(false);
     }
@@ -663,7 +835,27 @@ export default function App() {
                     placeholder="描述您想要生成的画面，例如：一只可爱的赛博朋克风格小猫，霓虹灯背景，高画质..."
                   />
                 </div>
-                
+
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 mb-2">比例</label>
+                  <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                    {aspectOptions.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setGenAspect(option.value)}
+                        className={`px-3 py-2 rounded-xl border text-sm font-medium transition-all ${
+                          genAspect === option.value
+                            ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
+                            : 'border-zinc-200 bg-zinc-50 text-zinc-600 hover:bg-zinc-100'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                 
                 <div className="bg-indigo-50/50 border border-indigo-100 rounded-xl p-4 text-sm text-indigo-800">
                   <p className="flex items-center gap-2 font-medium mb-1"><Sparkles size={16} /> 画质与数量说明</p>
                   <p className="text-indigo-600/80 text-xs leading-relaxed">
@@ -888,7 +1080,13 @@ export default function App() {
               )}
             </div>
             
-            <div className="p-4 border-t border-zinc-100 bg-zinc-50/50 flex justify-end">
+            <div className="p-4 border-t border-zinc-100 bg-zinc-50/50 flex justify-between gap-3">
+              <button
+                onClick={resetStoredSettings}
+                className="px-4 py-2 rounded-lg font-medium text-sm text-red-600 hover:bg-red-50 transition-colors"
+              >
+                重置配置
+              </button>
               <button
                 onClick={() => setIsSettingsOpen(false)}
                 className="bg-zinc-900 text-white px-5 py-2 rounded-lg font-medium text-sm hover:bg-zinc-800 transition-colors"

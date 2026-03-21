@@ -147,4 +147,5 @@ npm run lint     # TypeScript 类型检查
 
 ## 📮 联系方式
 
-如有问题或建议，请通过 GitHub Issues 联系。
+- 个人博客：[https://www.xiaoyang.cc.cd](https://www.xiaoyang.cc.cd)
+- GitHub Issues：欢迎提出问题和建议
