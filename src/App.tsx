@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Settings, Upload, Image as ImageIcon, Wand2, X, AlertCircle, Loader2, Download, SlidersHorizontal, Brush, Trash2, Eraser, Sparkles, Globe } from 'lucide-react';
 import { GoogleGenAI } from '@google/genai';
 
-type Vendor = 'gemini' | 'openai' | 'custom';
+type Vendor = 'gemini' | 'openai' | 'custom' | 'custom-raw';
 
 interface AppSettings {
   vendor: Vendor;
@@ -46,6 +46,9 @@ const STORAGE_KEYS = {
 const normalizeBaseUrl = (baseUrl: string) => baseUrl.trim().replace(/\/$/, '');
 
 const isModelScopeBaseUrl = (baseUrl: string) => /api-inference\.modelscope\.cn/i.test(baseUrl);
+
+// 检测是否为完整API URL（如NVIDIA的flux），不需要拼接路径
+const isFullApiUrl = (url: string) => /\/genai\/|\/v1\/(?:genai|images|generate)/i.test(url);
 
 const parseApiError = async (response: Response): Promise<string> => {
   const text = await response.text().catch(() => '');
@@ -504,17 +507,22 @@ export default function App() {
         if (!foundImage) {
           throw new Error('Gemini API ??????????????????????');
         }
-      } else if (settings.vendor === 'openai' || settings.vendor === 'custom') {
+      } else if (settings.vendor === 'openai' || settings.vendor === 'custom' || settings.vendor === 'custom-raw') {
         const isCustom = settings.vendor === 'custom';
-        const baseUrl = isCustom ? settings.customBaseUrl : 'https://api.openai.com/v1';
-        const apiKey = isCustom ? settings.customApiKey : settings.openaiApiKey;
-        const model = isCustom ? settings.customGenModel : 'dall-e-3';
-        const isModelScope = isCustom && isModelScopeBaseUrl(baseUrl);
+        const isCustomRaw = settings.vendor === 'custom-raw';
+        const baseUrl = isCustom || isCustomRaw ? settings.customBaseUrl : 'https://api.openai.com/v1';
+        const apiKey = isCustom || isCustomRaw ? settings.customApiKey : settings.openaiApiKey;
+        const model = isCustom || isCustomRaw ? settings.customGenModel : 'dall-e-3';
+        const isModelScope = (isCustom || isCustomRaw) && isModelScopeBaseUrl(baseUrl);
+        const isFullUrl = isCustomRaw || isFullApiUrl(baseUrl);
         const normalizedBaseUrl = normalizeBaseUrl(baseUrl);
         const modelscopePath = normalizedBaseUrl.replace(/^https?:\/\/api-inference\.modelscope\.cn/i, '');
-        const apiUrl = isModelScope
-          ? `/modelscope-proxy${modelscopePath}/images/generations`
-          : `${normalizedBaseUrl}/images/generations`;
+        // 如果是完整URL（custom-raw模式或检测到/genai/路径），直接使用，不拼接
+        const apiUrl = isFullUrl
+          ? normalizedBaseUrl
+          : isModelScope
+            ? `/modelscope-proxy${modelscopePath}/images/generations`
+            : `${normalizedBaseUrl}/images/generations`;
 
         if (!baseUrl || !apiKey) {
           throw new Error(`???? ${isCustom ? '??? API' : 'OpenAI'} ?????? Key?`);
@@ -990,6 +998,16 @@ export default function App() {
                   >
                     第三方/国内兼容
                   </button>
+                  <button
+                    onClick={() => setSettings({ ...settings, vendor: 'custom-raw' })}
+                    className={`px-3 py-2.5 rounded-xl border text-xs font-medium transition-all ${
+                      settings.vendor === 'custom-raw' 
+                        ? 'border-indigo-600 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-600' 
+                        : 'border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50'
+                    }`}
+                  >
+                    自定义完整URL
+                  </button>
                 </div>
               </div>
 
@@ -1032,20 +1050,22 @@ export default function App() {
               )}
 
               {/* Custom API Settings */}
-              {settings.vendor === 'custom' && (
+              {(settings.vendor === 'custom' || settings.vendor === 'custom-raw') && (
                 <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-200">
                   <div className="bg-amber-50 text-amber-800 p-3 rounded-lg text-xs leading-relaxed">
-                    适用于国内大模型或中转 API。只需填写 <strong>Base URL</strong>，系统会自动拼接 <code>/images/edits</code> 或 <code>/images/generations</code>。
+                    {settings.vendor === 'custom-raw'
+                      ? <>直接使用完整API URL，不拼接任何路径。适用于NVIDIA等特定API。</>
+                      : <>适用于国内大模型或中转 API。只需填写 <strong>Base URL</strong>，系统会自动拼接 <code>/images/edits</code> 或 <code>/images/generations</code>。</>}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-zinc-700 mb-1">Base URL (基础地址)</label>
+                    <label className="block text-sm font-medium text-zinc-700 mb-1">{settings.vendor === 'custom-raw' ? '完整 API URL' : 'Base URL (基础地址)'}</label>
                     <div className="space-y-2">
                       <input
                         type="text"
                         value={settings.customBaseUrl}
                         onChange={(e) => setSettings({ ...settings, customBaseUrl: e.target.value })}
                         className="w-full text-sm border border-zinc-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none font-mono"
-                        placeholder="https://api.example.com/v1"
+                        placeholder={settings.vendor === 'custom-raw' ? 'https://ai.api.nvidia.com/v1/genai/black-forest-labs/flux.2-klein-4b' : 'https://api.example.com/v1'}
                       />
                       <div className="flex flex-wrap gap-2">
                         <button onClick={() => setSettings({...settings, customBaseUrl: 'https://api.siliconflow.cn/v1'})} className="text-xs bg-zinc-100 hover:bg-zinc-200 text-zinc-600 px-2 py-1 rounded transition-colors">硅基流动 (SiliconFlow)</button>
