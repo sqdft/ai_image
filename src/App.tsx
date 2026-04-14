@@ -69,9 +69,25 @@ const parseApiError = async (response: Response): Promise<string> => {
   }
 };
 
+const getMimeTypeFromBase64 = (base64: string): string => {
+  // JPEG: /9j/4AA
+  if (base64.startsWith('/9j/')) return 'image/jpeg';
+  // PNG: iVBORw0KGgo
+  if (base64.startsWith('iVBOR')) return 'image/png';
+  // WEBP: UklGR
+  if (base64.startsWith('UklGR')) return 'image/webp';
+  return 'image/png';
+};
+
 const getImageResult = (data: any): string | null => {
   if (data?.data?.[0]?.b64_json) return `data:image/png;base64,${data.data[0].b64_json}`;
   if (data?.data?.[0]?.url) return data.data[0].url;
+  // NVIDIA 格式: {artifacts: [{base64: "..."}]}
+  if (data?.artifacts?.[0]?.base64) {
+    const base64 = data.artifacts[0].base64;
+    const mimeType = getMimeTypeFromBase64(base64);
+    return `data:${mimeType};base64,${base64}`;
+  }
   if (data?.output_images?.[0]?.url) return data.output_images[0].url;
   if (typeof data?.output_images?.[0] === 'string') return data.output_images[0];
   if (data?.outputs?.images?.[0]?.url) return data.outputs.images[0].url;
