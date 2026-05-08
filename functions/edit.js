@@ -1,4 +1,5 @@
 const TARGET_HOST = 'dashscope.aliyuncs.com';
+const API_PATH = '/api/v1/services/aigc/multimodal-generation/generation';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,7 +14,7 @@ export async function onRequest(context) {
 
   try {
     const url = new URL(context.request.url);
-    const targetUrl = `https://${TARGET_HOST}/compatible-mode/v1/images/edits${url.search}`;
+    const targetUrl = `https://${TARGET_HOST}${API_PATH}${url.search}`;
 
     const headers = new Headers(context.request.headers);
     headers.set('Host', TARGET_HOST);

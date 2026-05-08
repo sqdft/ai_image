@@ -87,6 +87,8 @@ const getMimeTypeFromBase64 = (base64: string): string => {
 const getImageResult = (data: any): string | null => {
   if (data?.data?.[0]?.b64_json) return `data:image/png;base64,${data.data[0].b64_json}`;
   if (data?.data?.[0]?.url) return data.data[0].url;
+  // DashScope 原生格式: {output: {choices: [{message: {content: [{image: "url"}]}}]}}
+  if (data?.output?.choices?.[0]?.message?.content?.[0]?.image) return data.output.choices[0].message.content[0].image;
   // NVIDIA 格式: {artifacts: [{base64: "..."}]}
   if (data?.artifacts?.[0]?.base64) {
     const base64 = data.artifacts[0].base64;
@@ -443,29 +445,32 @@ export default function App() {
 
         const model = settings.dashscopeGenModel || 'qwen-image-2.0';
 
-        // Convert base64 to blob for multipart/form-data
-        const byteCharacters = atob(base64Data);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteCharacters);
-        const imageBlob = new Blob([byteArray], { type: mimeType });
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        };
 
-        const formData = new FormData();
-        formData.append('image', imageBlob, 'image.png');
-        if (maskBlob) {
-          formData.append('mask', maskBlob, 'mask.png');
-        }
-        formData.append('prompt', settings.prompt);
-        formData.append('model', model);
+        const content: any[] = [
+          { image: `data:${mimeType};base64,${base64Data}` },
+          { text: settings.prompt },
+        ];
+
+        const requestBody = {
+          model,
+          input: {
+            messages: [
+              { role: 'user', content }
+            ]
+          },
+          parameters: {
+            n: 1,
+          }
+        };
 
         const response = await fetch('/edit', {
           method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${apiKey}`,
-          },
-          body: formData,
+          headers,
+          body: JSON.stringify(requestBody),
         });
 
         if (!response.ok) {
@@ -595,10 +600,16 @@ export default function App() {
         };
 
         const requestBody = {
-          prompt: genPrompt,
           model,
-          n: 1,
-          size: selectedAspect.size,
+          input: {
+            messages: [
+              { role: 'user', content: [{ text: genPrompt }] }
+            ]
+          },
+          parameters: {
+            size: selectedAspect.size.replace('x', '*'),
+            n: 1,
+          }
         };
 
         const response = await fetch('/gen', {
@@ -1184,8 +1195,8 @@ export default function App() {
                   <div>
                     <label className="block text-sm font-medium text-zinc-700 mb-1">API Base URL</label>
                     <div className="text-xs text-zinc-500 bg-zinc-50 border border-zinc-200 rounded-lg p-2.5 font-mono space-y-1">
-                      <div>文生图: <span className="text-zinc-700">/gen → https://dashscope.aliyuncs.com/compatible-mode/v1/images/generations</span></div>
-                      <div>去水印: <span className="text-zinc-700">/edit → https://dashscope.aliyuncs.com/compatible-mode/v1/images/edits</span></div>
+                      <div>文生图: <span className="text-zinc-700">/gen → /api/v1/services/aigc/multimodal-generation/generation</span></div>
+                      <div>去水印: <span className="text-zinc-700">/edit → /api/v1/services/aigc/multimodal-generation/generation</span></div>
                     </div>
                   </div>
                   <div>
