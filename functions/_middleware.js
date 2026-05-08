@@ -1,4 +1,4 @@
-const PROXY_ROUTES: Record<string, string> = {
+const PROXY_ROUTES = {
   '/modelscope-proxy': 'api-inference.modelscope.cn',
   '/dashscope-proxy': 'dashscope.aliyuncs.com',
 };
@@ -9,11 +9,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 };
 
-export const onRequest: PagesFunction = async (context) => {
+export async function onRequest(context) {
   const url = new URL(context.request.url);
   const pathname = url.pathname;
 
-  // Only intercept proxy routes, pass through everything else
   const matchedPrefix = Object.keys(PROXY_ROUTES).find((prefix) =>
     pathname.startsWith(prefix + '/')
   );
@@ -35,7 +34,6 @@ export const onRequest: PagesFunction = async (context) => {
     headers.set('Host', targetHost);
     headers.delete('content-length');
 
-    // ModelScope specific headers
     if (targetHost === 'api-inference.modelscope.cn') {
       if (subPath.includes('/images/generations')) {
         headers.set('X-ModelScope-Async-Mode', 'true');
@@ -60,10 +58,10 @@ export const onRequest: PagesFunction = async (context) => {
       status: response.status,
       headers: newHeaders,
     });
-  } catch (err: any) {
+  } catch (err) {
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
       headers: corsHeaders,
     });
   }
-};
+}
