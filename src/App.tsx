@@ -460,7 +460,7 @@ export default function App() {
         formData.append('prompt', settings.prompt);
         formData.append('model', model);
 
-        const response = await fetch('/ds-edit', {
+        const response = await fetch('/dashscope-image-edit', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${apiKey}`,
@@ -601,7 +601,7 @@ export default function App() {
           size: selectedAspect.size,
         };
 
-        const response = await fetch('/ds-gen', {
+        const response = await fetch('/dashscope-image-gen', {
           method: 'POST',
           headers,
           body: JSON.stringify(requestBody),
