@@ -13,7 +13,8 @@ export async function onRequest(context) {
 
   try {
     const url = new URL(context.request.url);
-    const targetUrl = `https://${TARGET_HOST}/compatible-mode/v1/images/generations${url.search}`;
+    const subPath = url.pathname.replace(/^\/dashscope-proxy/, '') || '/';
+    const targetUrl = `https://${TARGET_HOST}${subPath}${url.search}`;
 
     const headers = new Headers(context.request.headers);
     headers.set('Host', TARGET_HOST);
