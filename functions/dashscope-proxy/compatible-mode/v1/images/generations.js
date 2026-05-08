@@ -1,7 +1,4 @@
-const PROXY_ROUTES = {
-  '/modelscope-proxy': 'api-inference.modelscope.cn',
-  '/dashscope-proxy': 'dashscope.aliyuncs.com',
-};
+const TARGET_HOST = 'dashscope.aliyuncs.com';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -10,38 +7,17 @@ const corsHeaders = {
 };
 
 export async function onRequest(context) {
-  const url = new URL(context.request.url);
-  const pathname = url.pathname;
-
-  const matchedPrefix = Object.keys(PROXY_ROUTES).find((prefix) =>
-    pathname.startsWith(prefix + '/')
-  );
-
-  if (!matchedPrefix) {
-    return context.next();
-  }
-
   if (context.request.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
 
   try {
-    const targetHost = PROXY_ROUTES[matchedPrefix];
-    const subPath = pathname.slice(matchedPrefix.length) || '/';
-    const targetUrl = `https://${targetHost}${subPath}${url.search}`;
+    const url = new URL(context.request.url);
+    const targetUrl = `https://${TARGET_HOST}/compatible-mode/v1/images/generations${url.search}`;
 
     const headers = new Headers(context.request.headers);
-    headers.set('Host', targetHost);
+    headers.set('Host', TARGET_HOST);
     headers.delete('content-length');
-
-    if (targetHost === 'api-inference.modelscope.cn') {
-      if (subPath.includes('/images/generations')) {
-        headers.set('X-ModelScope-Async-Mode', 'true');
-      }
-      if (subPath.includes('/tasks/')) {
-        headers.set('X-ModelScope-Task-Type', 'image_generation');
-      }
-    }
 
     const response = await fetch(targetUrl, {
       method: context.request.method,
