@@ -1182,6 +1182,13 @@ export default function App() {
                     使用阿里百炼 (DashScope) OpenAI 兼容接口。支持千问图像模型，自动通过代理解决跨域问题。
                   </div>
                   <div>
+                    <label className="block text-sm font-medium text-zinc-700 mb-1">API Base URL</label>
+                    <div className="text-xs text-zinc-500 bg-zinc-50 border border-zinc-200 rounded-lg p-2.5 font-mono space-y-1">
+                      <div>文生图: <span className="text-zinc-700">/gen → https://dashscope.aliyuncs.com/compatible-mode/v1/images/generations</span></div>
+                      <div>去水印: <span className="text-zinc-700">/edit → https://dashscope.aliyuncs.com/compatible-mode/v1/images/edits</span></div>
+                    </div>
+                  </div>
+                  <div>
                     <label className="block text-sm font-medium text-zinc-700 mb-1">DashScope API Key</label>
                     <input
                       type="password"
