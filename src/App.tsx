@@ -2,12 +2,14 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Settings, Upload, Image as ImageIcon, Wand2, X, AlertCircle, Loader2, Download, SlidersHorizontal, Brush, Trash2, Eraser, Sparkles, Globe } from 'lucide-react';
 import { GoogleGenAI } from '@google/genai';
 
-type Vendor = 'gemini' | 'openai' | 'custom' | 'custom-raw';
+type Vendor = 'gemini' | 'openai' | 'dashscope' | 'custom' | 'custom-raw';
 
 interface AppSettings {
   vendor: Vendor;
   geminiApiKey: string;
   openaiApiKey: string;
+  dashscopeApiKey: string;
+  dashscopeGenModel: string;
   customBaseUrl: string;
   customApiKey: string;
   customEditModel: string;
@@ -21,6 +23,8 @@ const defaultSettings: AppSettings = {
   vendor: 'gemini',
   geminiApiKey: '',
   openaiApiKey: '',
+  dashscopeApiKey: '',
+  dashscopeGenModel: 'qwen-image-2.0',
   customBaseUrl: 'https://api.openai.com/v1',
   customApiKey: '',
   customEditModel: 'dall-e-2',
@@ -431,6 +435,51 @@ export default function App() {
            throw new Error('Gemini API 未返回图片。模型可能拒绝了请求或返回了文本。');
         }
 
+      } else if (settings.vendor === 'dashscope') {
+        const apiKey = settings.dashscopeApiKey;
+        if (!apiKey) {
+          throw new Error('需要阿里百炼 API Key。请在设置中配置。');
+        }
+
+        const model = settings.dashscopeGenModel || 'qwen-image-2.0';
+
+        // Convert base64 to blob for multipart/form-data
+        const byteCharacters = atob(base64Data);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteCharacters);
+        const imageBlob = new Blob([byteArray], { type: mimeType });
+
+        const formData = new FormData();
+        formData.append('image', imageBlob, 'image.png');
+        if (maskBlob) {
+          formData.append('mask', maskBlob, 'mask.png');
+        }
+        formData.append('prompt', settings.prompt);
+        formData.append('model', model);
+
+        const response = await fetch('/dashscope-proxy/compatible-mode/v1/images/edits', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+          },
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error(await parseApiError(response));
+        }
+
+        const data = await response.json();
+        const imageResult = getImageResult(data);
+        if (imageResult) {
+          setResultImage(imageResult);
+        } else {
+          throw new Error(`API 未返回预期格式的图片: ${JSON.stringify(data).slice(0, 200)}`);
+        }
+
       } else if (settings.vendor === 'openai' || settings.vendor === 'custom' || settings.vendor === 'custom-raw') {
         const isCustom = settings.vendor === 'custom';
         const isCustomRaw = settings.vendor === 'custom-raw';
@@ -529,6 +578,44 @@ export default function App() {
 
         if (!foundImage) {
           throw new Error('Gemini API ??????????????????????');
+        }
+      } else if (settings.vendor === 'dashscope') {
+        const apiKey = settings.dashscopeApiKey;
+        if (!apiKey) {
+          throw new Error('需要阿里百炼 API Key。请在设置中配置。');
+        }
+
+        const model = settings.dashscopeGenModel || 'qwen-image-2.0';
+        const selectedAspect = aspectOptions.find((option) => option.value === genAspect) || aspectOptions[0];
+
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        };
+
+        const requestBody = {
+          prompt: genPrompt,
+          model,
+          n: 1,
+          size: selectedAspect.size,
+        };
+
+        const response = await fetch('/dashscope-proxy/compatible-mode/v1/images/generations', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(requestBody),
+        });
+
+        if (!response.ok) {
+          throw new Error(await parseApiError(response));
+        }
+
+        const data = await response.json();
+        const imageResult = getImageResult(data);
+        if (imageResult) {
+          setGenResultImage(imageResult);
+        } else {
+          throw new Error(`API ???????????: ${JSON.stringify(data).slice(0, 200)}`);
         }
       } else if (settings.vendor === 'openai' || settings.vendor === 'custom' || settings.vendor === 'custom-raw') {
         const isCustom = settings.vendor === 'custom';
@@ -1016,6 +1103,16 @@ export default function App() {
                     OpenAI
                   </button>
                   <button
+                    onClick={() => setSettings({ ...settings, vendor: 'dashscope' })}
+                    className={`px-3 py-2.5 rounded-xl border text-xs font-medium transition-all ${
+                      settings.vendor === 'dashscope' 
+                        ? 'border-indigo-600 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-600' 
+                        : 'border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50'
+                    }`}
+                  >
+                    阿里百炼
+                  </button>
+                  <button
                     onClick={() => setSettings({ ...settings, vendor: 'custom' })}
                     className={`px-3 py-2.5 rounded-xl border text-xs font-medium transition-all ${
                       settings.vendor === 'custom' 
@@ -1076,6 +1173,35 @@ export default function App() {
                 </div>
               )}
 
+              {/* DashScope Settings */}
+              {settings.vendor === 'dashscope' && (
+                <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                  <div className="bg-purple-50 text-purple-800 p-3 rounded-lg text-xs leading-relaxed">
+                    使用阿里百炼 (DashScope) OpenAI 兼容接口。支持千问图像模型，自动通过代理解决跨域问题。
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-700 mb-1">DashScope API Key</label>
+                    <input
+                      type="password"
+                      value={settings.dashscopeApiKey}
+                      onChange={(e) => setSettings({ ...settings, dashscopeApiKey: e.target.value })}
+                      className="w-full text-sm border border-zinc-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                      placeholder="sk-..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-700 mb-1">绘图模型</label>
+                    <input
+                      type="text"
+                      value={settings.dashscopeGenModel}
+                      onChange={(e) => setSettings({ ...settings, dashscopeGenModel: e.target.value })}
+                      className="w-full text-sm border border-zinc-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                      placeholder="qwen-image-2.0"
+                    />
+                  </div>
+                </div>
+              )}
+
               {/* Custom API Settings */}
               {(settings.vendor === 'custom' || settings.vendor === 'custom-raw') && (
                 <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-200">
@@ -1095,7 +1221,6 @@ export default function App() {
                         placeholder={settings.vendor === 'custom-raw' ? 'https://ai.api.nvidia.com/v1/genai/black-forest-labs/flux.2-klein-4b' : 'https://api.example.com/v1'}
                       />
                       <div className="flex flex-wrap gap-2">
-                        <button onClick={() => setSettings({...settings, customBaseUrl: 'https://dashscope.aliyuncs.com/api/v1'})} className="text-xs bg-zinc-100 hover:bg-zinc-200 text-zinc-600 px-2 py-1 rounded transition-colors">阿里通义万相 (DashScope)</button>
                         <button onClick={() => setSettings({...settings, customBaseUrl: 'https://api.siliconflow.cn/v1'})} className="text-xs bg-zinc-100 hover:bg-zinc-200 text-zinc-600 px-2 py-1 rounded transition-colors">硅基流动 (SiliconFlow)</button>
                         <button onClick={() => setSettings({...settings, customBaseUrl: 'https://api.chatanywhere.tech/v1'})} className="text-xs bg-zinc-100 hover:bg-zinc-200 text-zinc-600 px-2 py-1 rounded transition-colors">ChatAnywhere</button>
                       </div>
