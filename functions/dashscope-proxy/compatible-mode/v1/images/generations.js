@@ -28,6 +28,7 @@ export async function onRequest(context) {
 
     const newHeaders = new Headers(response.headers);
     Object.entries(corsHeaders).forEach(([k, v]) => newHeaders.set(k, v));
+    newHeaders.set('X-Proxy', 'dashscope');
     newHeaders.delete('content-encoding');
 
     return new Response(response.body, {
