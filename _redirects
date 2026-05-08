@@ -1,0 +1,2 @@
+/modelscope-proxy/* https://api-inference.modelscope.cn/:splat 200
+/dashscope-proxy/* https://dashscope.aliyuncs.com/:splat 200

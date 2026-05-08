@@ -46,6 +46,7 @@ const STORAGE_KEYS = {
 const normalizeBaseUrl = (baseUrl: string) => baseUrl.trim().replace(/\/$/, '');
 
 const isModelScopeBaseUrl = (baseUrl: string) => /api-inference\.modelscope\.cn/i.test(baseUrl);
+const isDashScopeBaseUrl = (baseUrl: string) => /dashscope\.aliyuncs\.com/i.test(baseUrl);
 
 // 检测是否为完整API URL（如NVIDIA的flux），不需要拼接路径
 const isFullApiUrl = (url: string) => /\/genai\/|\/v1\/(?:genai|images|generate)/i.test(url);
@@ -430,12 +431,18 @@ export default function App() {
            throw new Error('Gemini API 未返回图片。模型可能拒绝了请求或返回了文本。');
         }
 
-      } else if (settings.vendor === 'openai' || settings.vendor === 'custom') {
+      } else if (settings.vendor === 'openai' || settings.vendor === 'custom' || settings.vendor === 'custom-raw') {
         const isCustom = settings.vendor === 'custom';
-        const baseUrl = isCustom ? settings.customBaseUrl : 'https://api.openai.com/v1';
-        const apiUrl = `${baseUrl.replace(/\/$/, '')}/images/edits`;
-        const apiKey = isCustom ? settings.customApiKey : settings.openaiApiKey;
-        const model = isCustom ? settings.customEditModel : 'dall-e-2';
+        const isCustomRaw = settings.vendor === 'custom-raw';
+        const baseUrl = isCustom || isCustomRaw ? settings.customBaseUrl : 'https://api.openai.com/v1';
+        const apiKey = isCustom || isCustomRaw ? settings.customApiKey : settings.openaiApiKey;
+        const model = isCustom || isCustomRaw ? settings.customEditModel : 'dall-e-2';
+        const normalizedBaseUrl = normalizeBaseUrl(baseUrl);
+        const isDashScope = (isCustom || isCustomRaw) && isDashScopeBaseUrl(baseUrl);
+        const dashscopePath = normalizedBaseUrl.replace(/^https?:\/\/dashscope\.aliyuncs\.com/i, '');
+        const apiUrl = isDashScope
+          ? `/dashscope-proxy${dashscopePath}/images/edits`
+          : `${normalizedBaseUrl}/images/edits`;
 
         if (!baseUrl || !apiKey) {
           throw new Error(`需要配置 ${isCustom ? '自定义 API' : 'OpenAI'} 的接口地址和 Key。`);
@@ -530,15 +537,19 @@ export default function App() {
         const apiKey = isCustom || isCustomRaw ? settings.customApiKey : settings.openaiApiKey;
         const model = isCustom || isCustomRaw ? settings.customGenModel : 'dall-e-3';
         const isModelScope = (isCustom || isCustomRaw) && isModelScopeBaseUrl(baseUrl);
+        const isDashScope = (isCustom || isCustomRaw) && isDashScopeBaseUrl(baseUrl);
         const isFullUrl = isCustomRaw || isFullApiUrl(baseUrl);
         const normalizedBaseUrl = normalizeBaseUrl(baseUrl);
         const modelscopePath = normalizedBaseUrl.replace(/^https?:\/\/api-inference\.modelscope\.cn/i, '');
+        const dashscopePath = normalizedBaseUrl.replace(/^https?:\/\/dashscope\.aliyuncs\.com/i, '');
         // 如果是完整URL（custom-raw模式或检测到/genai/路径），直接使用，不拼接
         const apiUrl = isFullUrl
           ? normalizedBaseUrl
           : isModelScope
             ? `/modelscope-proxy${modelscopePath}/images/generations`
-            : `${normalizedBaseUrl}/images/generations`;
+            : isDashScope
+              ? `/dashscope-proxy${dashscopePath}/images/generations`
+              : `${normalizedBaseUrl}/images/generations`;
 
         if (!baseUrl || !apiKey) {
           throw new Error(`???? ${isCustom ? '??? API' : 'OpenAI'} ?????? Key?`);
@@ -1084,6 +1095,7 @@ export default function App() {
                         placeholder={settings.vendor === 'custom-raw' ? 'https://ai.api.nvidia.com/v1/genai/black-forest-labs/flux.2-klein-4b' : 'https://api.example.com/v1'}
                       />
                       <div className="flex flex-wrap gap-2">
+                        <button onClick={() => setSettings({...settings, customBaseUrl: 'https://dashscope.aliyuncs.com/api/v1'})} className="text-xs bg-zinc-100 hover:bg-zinc-200 text-zinc-600 px-2 py-1 rounded transition-colors">阿里通义万相 (DashScope)</button>
                         <button onClick={() => setSettings({...settings, customBaseUrl: 'https://api.siliconflow.cn/v1'})} className="text-xs bg-zinc-100 hover:bg-zinc-200 text-zinc-600 px-2 py-1 rounded transition-colors">硅基流动 (SiliconFlow)</button>
                         <button onClick={() => setSettings({...settings, customBaseUrl: 'https://api.chatanywhere.tech/v1'})} className="text-xs bg-zinc-100 hover:bg-zinc-200 text-zinc-600 px-2 py-1 rounded transition-colors">ChatAnywhere</button>
                       </div>

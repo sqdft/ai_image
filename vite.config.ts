@@ -36,6 +36,11 @@ export default defineConfig(({mode}) => {
           },
           rewrite: (proxyPath) => proxyPath.replace(/^\/modelscope-proxy/, ''),
         },
+        '/dashscope-proxy': {
+          target: 'https://dashscope.aliyuncs.com',
+          changeOrigin: true,
+          rewrite: (proxyPath) => proxyPath.replace(/^\/dashscope-proxy/, ''),
+        },
       },
     },
   };
