@@ -460,7 +460,7 @@ export default function App() {
         formData.append('prompt', settings.prompt);
         formData.append('model', model);
 
-        const response = await fetch('/dashscope-proxy/compatible-mode/v1/images/edits', {
+        const response = await fetch('/api/dashscope-edits', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${apiKey}`,
@@ -491,6 +491,7 @@ export default function App() {
         const dashscopePath = normalizedBaseUrl.replace(/^https?:\/\/dashscope\.aliyuncs\.com/i, '');
         const apiUrl = isDashScope
           ? `/dashscope-proxy${dashscopePath}/images/edits`
+            // Note: for dashscope vendor, use /api/dashscope-edits instead
           : `${normalizedBaseUrl}/images/edits`;
 
         if (!baseUrl || !apiKey) {
@@ -600,7 +601,7 @@ export default function App() {
           size: selectedAspect.size,
         };
 
-        const response = await fetch('/dashscope-proxy/compatible-mode/v1/images/generations', {
+        const response = await fetch('/api/dashscope-generations', {
           method: 'POST',
           headers,
           body: JSON.stringify(requestBody),
@@ -636,6 +637,7 @@ export default function App() {
             ? `/modelscope-proxy${modelscopePath}/images/generations`
             : isDashScope
               ? `/dashscope-proxy${dashscopePath}/images/generations`
+            // Note: for dashscope vendor, use /api/dashscope-generations instead
               : `${normalizedBaseUrl}/images/generations`;
 
         if (!baseUrl || !apiKey) {

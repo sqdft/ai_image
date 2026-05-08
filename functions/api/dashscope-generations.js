@@ -13,8 +13,7 @@ export async function onRequest(context) {
 
   try {
     const url = new URL(context.request.url);
-    const subPath = url.pathname.replace(/^\/dashscope-proxy/, '') || '/';
-    const targetUrl = `https://${TARGET_HOST}${subPath}${url.search}`;
+    const targetUrl = `https://${TARGET_HOST}/compatible-mode/v1/images/generations${url.search}`;
 
     const headers = new Headers(context.request.headers);
     headers.set('Host', TARGET_HOST);
@@ -29,7 +28,6 @@ export async function onRequest(context) {
 
     const newHeaders = new Headers(response.headers);
     Object.entries(corsHeaders).forEach(([k, v]) => newHeaders.set(k, v));
-    newHeaders.set('X-Proxy', 'dashscope');
     newHeaders.delete('content-encoding');
 
     return new Response(response.body, {
