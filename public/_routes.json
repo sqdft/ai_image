@@ -1,5 +1,5 @@
 {
   "version": 1,
-  "include": ["/*"],
-  "exclude": ["/dashscope-image-gen", "/dashscope-image-edit"]
+  "include": ["/dashscope-image-gen", "/dashscope-image-edit"],
+  "exclude": []
 }
