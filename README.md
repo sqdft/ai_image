@@ -81,7 +81,7 @@ npm run dev
 默认启动地址：
 
 ```text
-http://localhost:3000
+http://localhost:3031
 ```
 
 ### 3. 构建生产版本

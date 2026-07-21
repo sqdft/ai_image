@@ -1,1 +1,267 @@
 @import "tailwindcss";
+
+:root {
+  --bg: #f3f0ff;
+  --bg-2: #eef6ff;
+  --ink: #1c1917;
+  --muted: #78716c;
+  --card: #ffffff;
+  --line: #e7e5e4;
+  --accent: #4f46e5;
+  --accent-2: #7c3aed;
+  --accent-soft: #eef2ff;
+  --ok: #059669;
+  --danger: #e11d48;
+  --shadow: 0 1px 2px rgb(28 25 23 / 4%), 0 12px 32px rgb(79 70 229 / 8%);
+  --shadow-lg: 0 8px 30px rgb(28 25 23 / 8%), 0 24px 60px rgb(79 70 229 / 10%);
+  --radius: 18px;
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  color: var(--ink);
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", ui-sans-serif, system-ui, sans-serif;
+  background:
+    radial-gradient(1200px 600px at 10% -10%, #ddd6fe 0%, transparent 55%),
+    radial-gradient(900px 500px at 100% 0%, #bae6fd 0%, transparent 50%),
+    radial-gradient(800px 500px at 50% 100%, #fde68a33 0%, transparent 45%),
+    linear-gradient(180deg, #faf8ff 0%, #f5f7fb 40%, #f8fafc 100%);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: #c7d2fe;
+  color: #1e1b4b;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+/* soft scrollbar */
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background: #d6d3d1;
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: #a8a29e;
+  background-clip: content-box;
+  border: 2px solid transparent;
+}
+
+.app-shell {
+  min-height: 100vh;
+}
+
+.glass-header {
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(16px) saturate(1.2);
+  border-bottom: 1px solid rgba(231, 229, 228, 0.9);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7) inset;
+}
+
+.brand-mark {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 55%, #db2777 100%);
+  box-shadow: 0 8px 20px rgb(79 70 229 / 28%);
+}
+
+.surface-card {
+  background: var(--card);
+  border: 1px solid rgba(231, 229, 228, 0.95);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.surface-card-soft {
+  background: linear-gradient(180deg, #ffffff 0%, #fafafa 100%);
+  border: 1px solid rgba(231, 229, 228, 0.95);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.drop-zone {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.9)),
+    repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 8px,
+      rgba(99, 102, 241, 0.03) 8px,
+      rgba(99, 102, 241, 0.03) 16px
+    );
+  border: 1.5px dashed #c4b5fd;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.drop-zone:hover {
+  border-color: #818cf8;
+  box-shadow: 0 10px 30px rgb(79 70 229 / 10%);
+  transform: translateY(-1px);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 45%, #7c3aed 100%);
+  color: white;
+  border: none;
+  box-shadow: 0 8px 20px rgb(79 70 229 / 25%), inset 0 1px 0 rgb(255 255 255 / 20%);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+}
+
+.btn-primary:hover:not(:disabled) {
+  filter: brightness(1.04);
+  box-shadow: 0 12px 28px rgb(79 70 229 / 32%), inset 0 1px 0 rgb(255 255 255 / 22%);
+  transform: translateY(-1px);
+}
+
+.btn-primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn-ghost {
+  background: white;
+  border: 1px solid #e7e5e4;
+  color: #44403c;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.btn-ghost:hover {
+  background: #fafaf9;
+  border-color: #d6d3d1;
+}
+
+.seg {
+  background: #f5f5f4;
+  border: 1px solid #e7e5e4;
+  padding: 3px;
+  border-radius: 12px;
+}
+
+.seg-item {
+  border-radius: 9px;
+  color: #78716c;
+  transition: all 0.15s ease;
+}
+
+.seg-item-active {
+  background: white;
+  color: #1c1917;
+  box-shadow: 0 1px 3px rgb(28 25 23 / 8%), 0 0 0 1px rgb(28 25 23 / 4%);
+  font-weight: 600;
+}
+
+.provider-pill {
+  background: linear-gradient(180deg, #fff, #f8fafc);
+  border: 1px solid #e7e5e4;
+  box-shadow: 0 1px 2px rgb(28 25 23 / 4%);
+}
+
+.provider-card {
+  background: linear-gradient(180deg, #ffffff 0%, #fcfcff 100%);
+  border: 1px solid #e7e5e4;
+  border-radius: 16px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.provider-card:hover {
+  border-color: #c7d2fe;
+  box-shadow: 0 10px 28px rgb(79 70 229 / 8%);
+}
+
+.provider-card-active {
+  border-color: #6366f1 !important;
+  box-shadow: 0 0 0 1px #6366f1, 0 14px 34px rgb(79 70 229 / 14%) !important;
+}
+
+.field {
+  width: 100%;
+  border: 1px solid #e7e5e4;
+  background: #fafaf9;
+  border-radius: 12px;
+  padding: 0.65rem 0.8rem;
+  outline: none;
+  transition: border-color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
+}
+
+.field:focus {
+  background: white;
+  border-color: #a5b4fc;
+  box-shadow: 0 0 0 3px rgb(99 102 241 / 15%);
+}
+
+.modal-scrim {
+  background: rgb(28 25 23 / 28%);
+  backdrop-filter: blur(4px);
+}
+
+.modal-panel {
+  background: white;
+  box-shadow: var(--shadow-lg);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  font-size: 11px;
+  border: 1px solid transparent;
+}
+
+.result-empty {
+  background:
+    radial-gradient(circle at 30% 20%, #eef2ff 0%, transparent 40%),
+    radial-gradient(circle at 80% 80%, #fdf4ff 0%, transparent 35%),
+    #fff;
+}
+
+.aspect-btn {
+  border-radius: 12px;
+  border: 1px solid #e7e5e4;
+  background: #fafaf9;
+  transition: all 0.12s ease;
+}
+
+.aspect-btn-active {
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 8px 18px rgb(79 70 229 / 22%);
+}
+
+.section-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #a8a29e;
+}
+
+.floating-download {
+  background: white;
+  border: 1px solid #e7e5e4;
+  box-shadow: 0 10px 30px rgb(28 25 23 / 12%);
+}
